@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: all-services
+  description: All microservices in the e-commerce platform
+spec:
+  targets:
+    - ./payment-service/catalog-info.yaml
+    - ./order-service/catalog-info.yaml
+    - ./inventory-service/catalog-info.yaml

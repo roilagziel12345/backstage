@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "backstage.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "backstage.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "backstage.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "backstage.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Force re-deploy when configmap changes
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "backstage.serviceAccountName" . }}
+      automountServiceAccountToken: true
+      containers:
+        - name: backstage
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - node
+            - packages/backend/dist/index.cjs.js
+            - --config
+            - /app/app-config.yaml
+          ports:
+            - name: http
+              containerPort: 7007
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: ARGOCD_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: argocd-token
+                  optional: true
+          volumeMounts:
+            - name: app-config
+              mountPath: /app/app-config.yaml
+              subPath: app-config.yaml
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 7007
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 7007
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: app-config
+          configMap:
+            name: {{ include "backstage.fullname" . }}-config

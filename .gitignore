@@ -1,0 +1,12 @@
+# Ignore large tarballs and temporary backups
+*.tar
+*.tar*
+.tmp-backstage*
+
+# Node / Build artifacts
+node_modules/
+dist/
+build/
+.yarn/
+yarn-error.log
+npm-debug.log

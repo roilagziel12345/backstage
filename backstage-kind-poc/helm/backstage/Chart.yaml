@@ -1,0 +1,12 @@
+apiVersion: v2
+name: backstage
+description: Backstage Developer Portal with ArgoCD, Jenkins, SonarQube and Kubernetes plugins
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - backstage
+  - developer-portal
+  - devops
+maintainers:
+  - name: DevOps Team

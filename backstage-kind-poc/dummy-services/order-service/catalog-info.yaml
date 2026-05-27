@@ -1,0 +1,45 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: order-service
+  title: Order Service
+  description: >
+    Order management microservice responsible for order creation, tracking,
+    fulfillment workflows, and order state machine for the e-commerce platform.
+  annotations:
+    # Jenkins CI/CD
+    jenkins.io/job-full-name: order-service
+    # ArgoCD
+    argocd/app-name: order-service
+    # SonarQube code quality
+    sonarqube.org/project-key: order-service
+    # Kubernetes
+    backstage.io/kubernetes-id: order-service
+    backstage.io/kubernetes-namespace: default
+    # Source control
+    backstage.io/source-location: url:https://github.com/example-org/order-service
+    github.com/project-slug: example-org/order-service
+    # Techdocs
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - nodejs
+    - express
+    - orders
+    - kafka
+  links:
+    - url: http://localhost:3000
+      title: Backstage Portal
+      icon: dashboard
+    - url: http://jenkins.example.com/job/order-service
+      title: Jenkins Pipeline
+      icon: ci
+spec:
+  type: service
+  lifecycle: production
+  owner: backend-team
+  system: ecommerce
+  consumesApis:
+    - payment-api
+  dependsOn:
+    - resource:default/postgres-orders
+    - resource:default/kafka-cluster

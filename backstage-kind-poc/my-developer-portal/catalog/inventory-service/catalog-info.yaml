@@ -1,0 +1,43 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: inventory-service
+  title: Inventory Service
+  description: >
+    Real-time inventory management microservice tracking stock levels, warehouse
+    locations, and product availability across the e-commerce platform.
+  annotations:
+    # Jenkins CI/CD
+    jenkins.io/job-full-name: inventory-service
+    # ArgoCD
+    argocd/app-name: inventory-service
+    # SonarQube code quality
+    sonarqube.org/project-key: inventory-service
+    # Kubernetes
+    backstage.io/kubernetes-id: inventory-service
+    backstage.io/kubernetes-namespace: default
+    # Source control
+    backstage.io/source-location: url:https://github.com/example-org/inventory-service
+    github.com/project-slug: example-org/inventory-service
+    # Techdocs
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - python
+    - fastapi
+    - inventory
+    - redis
+  links:
+    - url: http://localhost:3000
+      title: Backstage Portal
+      icon: dashboard
+    - url: http://jenkins.example.com/job/inventory-service
+      title: Jenkins Pipeline
+      icon: ci
+spec:
+  type: service
+  lifecycle: production
+  owner: inventory-team
+  system: ecommerce
+  dependsOn:
+    - resource:default/redis-cache
+    - resource:default/postgres-inventory

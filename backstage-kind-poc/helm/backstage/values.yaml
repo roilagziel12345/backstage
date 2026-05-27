@@ -1,0 +1,148 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Backstage Helm Chart — values.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+replicaCount: 1
+
+image:
+  repository: backstage
+  tag: "latest"
+  pullPolicy: Never   # Image is loaded directly into KIND containerd
+
+nameOverride: ""
+fullnameOverride: "backstage"
+
+serviceAccount:
+  create: true
+  name: "backstage"
+  # Allow pod to read its own service account token for K8s plugin
+  annotations: {}
+
+podAnnotations: {}
+
+service:
+  type: NodePort
+  port: 7007
+  nodePort: 30000   # KIND extraPortMapping: 30000 → host:3000
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Backstage app-config (rendered into a ConfigMap)
+# ─────────────────────────────────────────────────────────────────────────────
+appConfig:
+  app:
+    title: DevOps Developer Portal
+    baseUrl: http://localhost:3000
+
+  organization:
+    name: DevOps PoC
+
+  backend:
+    baseUrl: http://localhost:7007
+    listen:
+      port: 7007
+      host: 0.0.0.0
+    csp:
+      connect-src: ["'self'", "http:", "https:"]
+    cors:
+      origin: http://localhost:3000
+      methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
+      credentials: true
+    database:
+      client: better-sqlite3
+      connection: ":memory:"
+    cache:
+      store: memory
+    auth:
+      dangerouslyDisableDefaultAuthPolicy: true
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  auth:
+    environment: development
+    providers:
+      guest:
+        dangerouslyAllowOutsideDevelopment: true
+
+  # ── Jenkins (via mock-server) ──────────────────────────────────────────────
+  jenkins:
+    instances:
+      - name: default
+        baseUrl: http://mock-server.backstage.svc.cluster.local:4010
+        username: admin
+        apiKey: mock-api-token-abc123
+
+  # ── SonarQube (via mock-server) ───────────────────────────────────────────
+  sonarqube:
+    instances:
+      - name: default
+        baseUrl: http://mock-server.backstage.svc.cluster.local:4010/sonarqube
+        apiKey: mock-sonar-token-xyz789
+
+  # ── ArgoCD ────────────────────────────────────────────────────────────────
+  argocd:
+    username: admin
+    password: ""
+    appLocatorMethods:
+      - type: config
+        instances:
+          - name: main
+            url: https://argocd-server.argocd.svc.cluster.local
+            token: ""
+
+  # ── Kubernetes ────────────────────────────────────────────────────────────
+  kubernetes:
+    serviceLocatorMethod:
+      type: multiTenant
+    clusterLocatorMethods:
+      - type: config
+        clusters:
+          - name: kind-backstage
+            url: https://kubernetes.default.svc
+            authProvider: serviceAccount
+            skipTLSVerify: true
+            skipMetricsLookup: false
+
+  # ── Proxy ─────────────────────────────────────────────────────────────────
+  proxy:
+    endpoints:
+      "/jenkins/api":
+        target: http://mock-server.backstage.svc.cluster.local:4010
+        changeOrigin: true
+        headers:
+          Authorization: Basic YWRtaW46bW9jay1hcGktdG9rZW4tYWJjMTIz
+      "/sonarqube":
+        target: http://mock-server.backstage.svc.cluster.local:4010/sonarqube
+        changeOrigin: true
+        headers:
+          Authorization: Basic bW9jay1zb25hci10b2tlbi14eXo3ODk6
+
+  # ── Techdocs ──────────────────────────────────────────────────────────────
+  techdocs:
+    builder: local
+    generator:
+      runIn: local
+    publisher:
+      type: local
+
+  # ── Catalog ───────────────────────────────────────────────────────────────
+  catalog:
+    import:
+      entityFilename: catalog-info.yaml
+      pullRequestBranchName: backstage-integration
+    rules:
+      - allow: [Component, System, API, Resource, Location, Group, User, Domain]
+    locations:
+      - type: file
+        target: /app/catalog/all-services.yaml
+        rules:
+          - allow: [Component, Location]
+
+  # ── Scaffolder ────────────────────────────────────────────────────────────
+  scaffolder: {}

@@ -1,0 +1,22 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: backstage
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # Backstage UI
+      - containerPort: 30000
+        hostPort: 3000
+        listenAddress: "0.0.0.0"
+        protocol: TCP
+      # ArgoCD UI (optional)
+      - containerPort: 30001
+        hostPort: 8080
+        listenAddress: "0.0.0.0"
+        protocol: TCP
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"

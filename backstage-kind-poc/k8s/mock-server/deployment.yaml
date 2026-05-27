@@ -1,0 +1,38 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-server
+  namespace: backstage
+  labels:
+    app: mock-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mock-server
+  template:
+    metadata:
+      labels:
+        app: mock-server
+    spec:
+      containers:
+        - name: mock-server
+          image: mock-server:latest
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 4010
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4010
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"

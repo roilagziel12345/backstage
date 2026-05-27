@@ -1,0 +1,44 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: payment-service
+  title: Payment Service
+  description: >
+    Core payment processing microservice handling all financial transactions,
+    card authorizations, and refunds for the e-commerce platform.
+  annotations:
+    # Jenkins CI/CD
+    jenkins.io/job-full-name: payment-service
+    # ArgoCD
+    argocd/app-name: payment-service
+    # SonarQube code quality
+    sonarqube.org/project-key: payment-service
+    # Kubernetes
+    backstage.io/kubernetes-id: payment-service
+    backstage.io/kubernetes-namespace: default
+    # Source control
+    backstage.io/source-location: url:https://github.com/example-org/payment-service
+    github.com/project-slug: example-org/payment-service
+    # Techdocs
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - java
+    - spring-boot
+    - payments
+    - pci-dss
+  links:
+    - url: http://localhost:3000
+      title: Backstage Portal
+      icon: dashboard
+    - url: http://jenkins.example.com/job/payment-service
+      title: Jenkins Pipeline
+      icon: ci
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: ecommerce
+  providesApis:
+    - payment-api
+  dependsOn:
+    - resource:default/postgres-payments
