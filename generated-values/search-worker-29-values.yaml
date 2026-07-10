@@ -1,0 +1,121 @@
+﻿nameOverride: search-worker-29
+
+replicaCount: 1
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-05/search-worker-29
+  tag: 1.29.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: search-worker-29
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8083
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "search-worker-29.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8083
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "search-worker-29"
+  - name: APP_NAMESPACE
+    value: "client-05"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: search-worker-29-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: search-worker-29-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: search-worker-29-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: search-worker-29-config
+  - secretRef:
+      name: search-worker-29-secret
+
+resources:
+  requests:
+    cpu: 150m
+    memory: 384Mi
+  limits:
+    cpu: 250m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: search-worker-29-config
+
+secret:
+  enabled: true
+  name: search-worker-29-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "search-worker-29-client"
+    FEATURE_KEY: "search-feature-29"
+  data:
+    API_TOKEN: dG9rZW4tc2VhcmNoLXdvcmtlci0yOQ==
+    DB_PASSWORD: cGFzc3dvcmQtMjk=

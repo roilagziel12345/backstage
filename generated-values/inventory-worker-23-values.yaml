@@ -1,0 +1,121 @@
+﻿nameOverride: inventory-worker-23
+
+replicaCount: 3
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-05/inventory-worker-23
+  tag: 1.23.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: inventory-worker-23
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8082
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "inventory-worker-23.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8082
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "inventory-worker-23"
+  - name: APP_NAMESPACE
+    value: "client-05"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: inventory-worker-23-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: inventory-worker-23-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: inventory-worker-23-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: inventory-worker-23-config
+  - secretRef:
+      name: inventory-worker-23-secret
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 750m
+    memory: 1024Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: inventory-worker-23-config
+
+secret:
+  enabled: true
+  name: inventory-worker-23-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "inventory-worker-23-client"
+    FEATURE_KEY: "inventory-feature-23"
+  data:
+    API_TOKEN: dG9rZW4taW52ZW50b3J5LXdvcmtlci0yMw==
+    DB_PASSWORD: cGFzc3dvcmQtMjM=

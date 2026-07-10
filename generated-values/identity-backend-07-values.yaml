@@ -1,0 +1,121 @@
+﻿nameOverride: identity-backend-07
+
+replicaCount: 3
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-01/identity-backend-07
+  tag: 1.7.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: identity-backend-07
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8081
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "identity-backend-07.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8081
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "identity-backend-07"
+  - name: APP_NAMESPACE
+    value: "client-01"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: identity-backend-07-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: identity-backend-07-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: identity-backend-07-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: identity-backend-07-config
+  - secretRef:
+      name: identity-backend-07-secret
+
+resources:
+  requests:
+    cpu: 75m
+    memory: 192Mi
+  limits:
+    cpu: 750m
+    memory: 1024Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: identity-backend-07-config
+
+secret:
+  enabled: true
+  name: identity-backend-07-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "identity-backend-07-client"
+    FEATURE_KEY: "identity-feature-07"
+  data:
+    API_TOKEN: dG9rZW4taWRlbnRpdHktYmFja2VuZC0wNw==
+    DB_PASSWORD: cGFzc3dvcmQtMDc=

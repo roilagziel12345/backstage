@@ -1,0 +1,224 @@
+﻿apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: orders-backend-22
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: orders-backend-22
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: demo-platform
+    app.openshift.io/runtime: quarkus
+    owner: commerce
+  annotations:
+    openshift.io/generated-by: fake-exporter
+    exportedAt: "2026-07-10T05:34:00Z"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: orders-backend-22-secret
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: orders-backend-22
+    app.kubernetes.io/component: backend
+    owner: commerce
+  annotations:
+    exportedAt: "2026-07-10T05:34:00Z"
+type: Opaque
+data:
+  API_TOKEN: dG9rZW4tb3JkZXJzLWJhY2tlbmQtMjI=
+  DB_PASSWORD: cGFzc3dvcmQtMjI=
+stringData:
+  CLIENT_ID: "orders-backend-22-client"
+  FEATURE_KEY: "orders-feature-22"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orders-backend-22-config
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: orders-backend-22
+    owner: commerce
+  annotations:
+    exportedAt: "2026-07-10T05:34:00Z"
+data:
+  LOG_LEVEL: info
+  REGION: eu-west-1
+  CLIENT_TIER: gold
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-backend-22
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: orders-backend-22
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/instance: orders-backend-22
+    owner: commerce
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8081"
+    exportedAt: "2026-07-10T05:34:00Z"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: orders-backend-22
+    app.kubernetes.io/instance: orders-backend-22
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8081
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-backend-22
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: orders-backend-22
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/instance: orders-backend-22
+    app.kubernetes.io/version: "1.22.0"
+    app.openshift.io/runtime: quarkus
+    owner: commerce
+  annotations:
+    app.openshift.io/connects-to: orders-backend-22-db
+    deployment.kubernetes.io/revision: "22"
+    exportedAt: "2026-07-10T05:34:00Z"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: orders-backend-22
+      app.kubernetes.io/instance: orders-backend-22
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: orders-backend-22
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/instance: orders-backend-22
+        sidecar.istio.io/inject: "true"
+        owner: commerce
+      annotations:
+        checksum/config: "22-orders-config"
+        exportedAt: "2026-07-10T05:34:00Z"
+    spec:
+      serviceAccountName: orders-backend-22
+      imagePullSecrets:
+        - name: registry-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: orders-backend-22
+          image: image-registry.openshift-image-registry.svc:5000/client-04/orders-backend-22:1.22.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: APP_NAME
+              value: "orders-backend-22"
+            - name: APP_NAMESPACE
+              value: "client-04"
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: orders-backend-22-config
+                  key: LOG_LEVEL
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: orders-backend-22-secret
+                  key: API_TOKEN
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: orders-backend-22-secret
+                  key: DB_PASSWORD
+          envFrom:
+            - configMapRef:
+                name: orders-backend-22-config
+            - secretRef:
+                name: orders-backend-22-secret
+          resources:
+            requests:
+              cpu: 75m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: app-config
+              mountPath: /etc/app
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: app-config
+          configMap:
+            name: orders-backend-22-config
+      nodeSelector:
+        kubernetes.io/os: linux
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: orders-backend-22
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: orders-backend-22
+    app.kubernetes.io/component: backend
+    owner: commerce
+  annotations:
+    haproxy.router.openshift.io/timeout: 60s
+    exportedAt: "2026-07-10T05:34:00Z"
+spec:
+  host: orders-backend-22.apps.demo-openshift.example.com
+  path: /
+  to:
+    kind: Service
+    name: orders-backend-22
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

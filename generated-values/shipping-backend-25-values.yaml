@@ -1,0 +1,121 @@
+﻿nameOverride: shipping-backend-25
+
+replicaCount: 1
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-01/shipping-backend-25
+  tag: 1.25.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: shipping-backend-25
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8084
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "shipping-backend-25.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8084
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "shipping-backend-25"
+  - name: APP_NAMESPACE
+    value: "client-01"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: shipping-backend-25-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: shipping-backend-25-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: shipping-backend-25-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: shipping-backend-25-config
+  - secretRef:
+      name: shipping-backend-25-secret
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 250m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: shipping-backend-25-config
+
+secret:
+  enabled: true
+  name: shipping-backend-25-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "shipping-backend-25-client"
+    FEATURE_KEY: "shipping-feature-25"
+  data:
+    API_TOKEN: dG9rZW4tc2hpcHBpbmctYmFja2VuZC0yNQ==
+    DB_PASSWORD: cGFzc3dvcmQtMjU=

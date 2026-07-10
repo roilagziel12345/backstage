@@ -1,0 +1,125 @@
+﻿nameOverride: analytics-worker-20
+
+replicaCount: 4
+
+workload:
+  type: StatefulSet
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-02/analytics-worker-20
+  tag: 1.20.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: analytics-worker-20
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8084
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "analytics-worker-20.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8084
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "analytics-worker-20"
+  - name: APP_NAMESPACE
+    value: "client-02"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: analytics-worker-20-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: analytics-worker-20-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: analytics-worker-20-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: analytics-worker-20-config
+  - secretRef:
+      name: analytics-worker-20-secret
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1536Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: analytics-worker-20-config
+
+secret:
+  enabled: true
+  name: analytics-worker-20-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "analytics-worker-20-client"
+    FEATURE_KEY: "analytics-feature-20"
+  data:
+    API_TOKEN: dG9rZW4tYW5hbHl0aWNzLXdvcmtlci0yMA==
+    DB_PASSWORD: cGFzc3dvcmQtMjA=
+
+statefulSet:
+  serviceName: analytics-worker-20
+  podManagementPolicy: OrderedReady

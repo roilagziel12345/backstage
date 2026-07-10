@@ -1,0 +1,101 @@
+nameOverride: my-app
+namespaceOverride: ""
+
+workload:
+  type: Deployment
+  annotations: {}
+  labels: {}
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/my-project/my-app
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  labels: {}
+  automountServiceAccountToken: null
+
+service:
+  enabled: true
+  type: ClusterIP
+  annotations: {}
+  labels: {}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+route:
+  enabled: true
+  annotations: {}
+  labels: {}
+  host: my-app.apps.example.com
+  path: /
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  alternateBackends: []
+  tls: {}
+
+env: []
+envFrom: []
+initContainers: []
+sidecars: []
+extraContainers: []
+
+containerPorts:
+  - name: http
+    containerPort: 8080
+    protocol: TCP
+
+resources: {}
+livenessProbe: {}
+readinessProbe: {}
+startupProbe: {}
+lifecycle: {}
+volumes: []
+volumeMounts: []
+podAnnotations: {}
+podLabels: {}
+securityContext: {}
+podSecurityContext: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+hostAliases: []
+dnsConfig: {}
+extraPodSpec: {}
+
+secret:
+  enabled: false
+  type: Opaque
+  stringData: {}
+  data: {}
+
+configMap:
+  enabled: false
+  data: {}
+
+deployment:
+  strategy: {}
+
+statefulSet:
+  serviceName: ""
+  podManagementPolicy: OrderedReady
+  updateStrategy: {}
+  volumeClaimTemplates: []
+
+persistentVolumeClaims: []
+hpa:
+  enabled: false
+pdb:
+  enabled: false
+networkPolicy:
+  enabled: false
+extraObjects: []

@@ -1,0 +1,40 @@
+{{- if .Values.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "universal-microservice.fullname" . }}
+  {{- with .Values.namespaceOverride }}
+  namespace: {{ . }}
+  {{- end }}
+  labels:
+    {{- include "universal-microservice.labels" . | nindent 4 }}
+    {{- with .Values.route.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.route.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  to:
+    kind: Service
+    name: {{ include "universal-microservice.fullname" . }}
+    weight: 100
+  {{- with .Values.route.alternateBackends }}
+  alternateBackends:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  port:
+    targetPort: {{ .Values.route.port.targetPort }}
+  wildcardPolicy: {{ .Values.route.wildcardPolicy }}
+  {{- with .Values.route.host }}
+  host: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.route.path }}
+  path: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.route.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

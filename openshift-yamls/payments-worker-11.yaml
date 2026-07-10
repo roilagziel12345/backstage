@@ -1,0 +1,224 @@
+﻿apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: payments-worker-11
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: payments-worker-11
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: demo-platform
+    app.openshift.io/runtime: quarkus
+    owner: platform
+  annotations:
+    openshift.io/generated-by: fake-exporter
+    exportedAt: "2026-07-10T18:17:00Z"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payments-worker-11-secret
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: payments-worker-11
+    app.kubernetes.io/component: worker
+    owner: platform
+  annotations:
+    exportedAt: "2026-07-10T18:17:00Z"
+type: Opaque
+data:
+  API_TOKEN: dG9rZW4tcGF5bWVudHMtd29ya2VyLTEx
+  DB_PASSWORD: cGFzc3dvcmQtMTE=
+stringData:
+  CLIENT_ID: "payments-worker-11-client"
+  FEATURE_KEY: "payments-feature-11"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payments-worker-11-config
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: payments-worker-11
+    owner: platform
+  annotations:
+    exportedAt: "2026-07-10T18:17:00Z"
+data:
+  LOG_LEVEL: info
+  REGION: eu-west-1
+  CLIENT_TIER: gold
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments-worker-11
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: payments-worker-11
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/instance: payments-worker-11
+    owner: platform
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    exportedAt: "2026-07-10T18:17:00Z"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: payments-worker-11
+    app.kubernetes.io/instance: payments-worker-11
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-worker-11
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: payments-worker-11
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/instance: payments-worker-11
+    app.kubernetes.io/version: "1.11.0"
+    app.openshift.io/runtime: quarkus
+    owner: platform
+  annotations:
+    app.openshift.io/connects-to: payments-worker-11-db
+    deployment.kubernetes.io/revision: "11"
+    exportedAt: "2026-07-10T18:17:00Z"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: payments-worker-11
+      app.kubernetes.io/instance: payments-worker-11
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: payments-worker-11
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/instance: payments-worker-11
+        sidecar.istio.io/inject: "true"
+        owner: platform
+      annotations:
+        checksum/config: "11-payments-config"
+        exportedAt: "2026-07-10T18:17:00Z"
+    spec:
+      serviceAccountName: payments-worker-11
+      imagePullSecrets:
+        - name: registry-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: payments-worker-11
+          image: image-registry.openshift-image-registry.svc:5000/client-05/payments-worker-11:1.11.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: APP_NAME
+              value: "payments-worker-11"
+            - name: APP_NAMESPACE
+              value: "client-05"
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: payments-worker-11-config
+                  key: LOG_LEVEL
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: payments-worker-11-secret
+                  key: API_TOKEN
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: payments-worker-11-secret
+                  key: DB_PASSWORD
+          envFrom:
+            - configMapRef:
+                name: payments-worker-11-config
+            - secretRef:
+                name: payments-worker-11-secret
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 750m
+              memory: 1024Mi
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: app-config
+              mountPath: /etc/app
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: app-config
+          configMap:
+            name: payments-worker-11-config
+      nodeSelector:
+        kubernetes.io/os: linux
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: payments-worker-11
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: payments-worker-11
+    app.kubernetes.io/component: worker
+    owner: platform
+  annotations:
+    haproxy.router.openshift.io/timeout: 60s
+    exportedAt: "2026-07-10T18:17:00Z"
+spec:
+  host: payments-worker-11.apps.demo-openshift.example.com
+  path: /
+  to:
+    kind: Service
+    name: payments-worker-11
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

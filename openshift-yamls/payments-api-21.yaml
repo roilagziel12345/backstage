@@ -1,0 +1,224 @@
+﻿apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: payments-api-21
+  namespace: client-03
+  labels:
+    app.kubernetes.io/name: payments-api-21
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: demo-platform
+    app.openshift.io/runtime: quarkus
+    owner: platform
+  annotations:
+    openshift.io/generated-by: fake-exporter
+    exportedAt: "2026-07-10T04:27:00Z"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payments-api-21-secret
+  namespace: client-03
+  labels:
+    app.kubernetes.io/name: payments-api-21
+    app.kubernetes.io/component: api
+    owner: platform
+  annotations:
+    exportedAt: "2026-07-10T04:27:00Z"
+type: Opaque
+data:
+  API_TOKEN: dG9rZW4tcGF5bWVudHMtYXBpLTIx
+  DB_PASSWORD: cGFzc3dvcmQtMjE=
+stringData:
+  CLIENT_ID: "payments-api-21-client"
+  FEATURE_KEY: "payments-feature-21"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payments-api-21-config
+  namespace: client-03
+  labels:
+    app.kubernetes.io/name: payments-api-21
+    owner: platform
+  annotations:
+    exportedAt: "2026-07-10T04:27:00Z"
+data:
+  LOG_LEVEL: info
+  REGION: eu-west-1
+  CLIENT_TIER: gold
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments-api-21
+  namespace: client-03
+  labels:
+    app.kubernetes.io/name: payments-api-21
+    app.kubernetes.io/component: api
+    app.kubernetes.io/instance: payments-api-21
+    owner: platform
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    exportedAt: "2026-07-10T04:27:00Z"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: payments-api-21
+    app.kubernetes.io/instance: payments-api-21
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-api-21
+  namespace: client-03
+  labels:
+    app.kubernetes.io/name: payments-api-21
+    app.kubernetes.io/component: api
+    app.kubernetes.io/instance: payments-api-21
+    app.kubernetes.io/version: "1.21.0"
+    app.openshift.io/runtime: quarkus
+    owner: platform
+  annotations:
+    app.openshift.io/connects-to: payments-api-21-db
+    deployment.kubernetes.io/revision: "21"
+    exportedAt: "2026-07-10T04:27:00Z"
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: payments-api-21
+      app.kubernetes.io/instance: payments-api-21
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: payments-api-21
+        app.kubernetes.io/component: api
+        app.kubernetes.io/instance: payments-api-21
+        sidecar.istio.io/inject: "true"
+        owner: platform
+      annotations:
+        checksum/config: "21-payments-config"
+        exportedAt: "2026-07-10T04:27:00Z"
+    spec:
+      serviceAccountName: payments-api-21
+      imagePullSecrets:
+        - name: registry-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: payments-api-21
+          image: image-registry.openshift-image-registry.svc:5000/client-03/payments-api-21:1.21.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: APP_NAME
+              value: "payments-api-21"
+            - name: APP_NAMESPACE
+              value: "client-03"
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: payments-api-21-config
+                  key: LOG_LEVEL
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: payments-api-21-secret
+                  key: API_TOKEN
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: payments-api-21-secret
+                  key: DB_PASSWORD
+          envFrom:
+            - configMapRef:
+                name: payments-api-21-config
+            - secretRef:
+                name: payments-api-21-secret
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: app-config
+              mountPath: /etc/app
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: app-config
+          configMap:
+            name: payments-api-21-config
+      nodeSelector:
+        kubernetes.io/os: linux
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: payments-api-21
+  namespace: client-03
+  labels:
+    app.kubernetes.io/name: payments-api-21
+    app.kubernetes.io/component: api
+    owner: platform
+  annotations:
+    haproxy.router.openshift.io/timeout: 60s
+    exportedAt: "2026-07-10T04:27:00Z"
+spec:
+  host: payments-api-21.apps.demo-openshift.example.com
+  path: /
+  to:
+    kind: Service
+    name: payments-api-21
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

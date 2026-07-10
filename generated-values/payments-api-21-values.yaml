@@ -1,0 +1,121 @@
+﻿nameOverride: payments-api-21
+
+replicaCount: 1
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-03/payments-api-21
+  tag: 1.21.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: payments-api-21
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "payments-api-21.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8080
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "payments-api-21"
+  - name: APP_NAMESPACE
+    value: "client-03"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: payments-api-21-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: payments-api-21-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: payments-api-21-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: payments-api-21-config
+  - secretRef:
+      name: payments-api-21-secret
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: payments-api-21-config
+
+secret:
+  enabled: true
+  name: payments-api-21-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "payments-api-21-client"
+    FEATURE_KEY: "payments-feature-21"
+  data:
+    API_TOKEN: dG9rZW4tcGF5bWVudHMtYXBpLTIx
+    DB_PASSWORD: cGFzc3dvcmQtMjE=

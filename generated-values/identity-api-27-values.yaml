@@ -1,0 +1,121 @@
+﻿nameOverride: identity-api-27
+
+replicaCount: 3
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-03/identity-api-27
+  tag: 1.27.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: identity-api-27
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8081
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "identity-api-27.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8081
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "identity-api-27"
+  - name: APP_NAMESPACE
+    value: "client-03"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: identity-api-27-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: identity-api-27-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: identity-api-27-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: identity-api-27-config
+  - secretRef:
+      name: identity-api-27-secret
+
+resources:
+  requests:
+    cpu: 75m
+    memory: 192Mi
+  limits:
+    cpu: 750m
+    memory: 1024Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: identity-api-27-config
+
+secret:
+  enabled: true
+  name: identity-api-27-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "identity-api-27-client"
+    FEATURE_KEY: "identity-feature-27"
+  data:
+    API_TOKEN: dG9rZW4taWRlbnRpdHktYXBpLTI3
+    DB_PASSWORD: cGFzc3dvcmQtMjc=

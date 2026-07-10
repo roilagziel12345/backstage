@@ -1,0 +1,183 @@
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+namespaceOverride: ""
+
+workload:
+  type: Deployment
+  annotations: {}
+  labels: {}
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/project/app
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  labels: {}
+  automountServiceAccountToken: null
+
+podAnnotations: {}
+podLabels: {}
+
+securityContext: {}
+podSecurityContext: {}
+
+service:
+  enabled: true
+  type: ClusterIP
+  annotations: {}
+  labels: {}
+  clusterIP: ""
+  externalTrafficPolicy: ""
+  internalTrafficPolicy: ""
+  ipFamilies: []
+  ipFamilyPolicy: ""
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []
+  sessionAffinity: ""
+  sessionAffinityConfig: {}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+
+route:
+  enabled: true
+  annotations: {}
+  labels: {}
+  host: ""
+  path: ""
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  alternateBackends: []
+  tls: {}
+  # tls:
+  #   termination: edge
+  #   insecureEdgeTerminationPolicy: Redirect
+
+secret:
+  enabled: false
+  name: ""
+  type: Opaque
+  annotations: {}
+  labels: {}
+  stringData: {}
+  data: {}
+
+configMap:
+  enabled: false
+  name: ""
+  annotations: {}
+  labels: {}
+  data: {}
+  binaryData: {}
+
+env: []
+# env:
+#   - name: SPRING_PROFILES_ACTIVE
+#     value: prod
+#   - name: PASSWORD
+#     valueFrom:
+#       secretKeyRef:
+#         name: my-secret
+#         key: password
+
+envFrom: []
+# envFrom:
+#   - secretRef:
+#       name: my-secret
+
+command: []
+args: []
+
+initContainers: []
+sidecars: []
+
+containerPorts:
+  - name: http
+    containerPort: 8080
+    protocol: TCP
+
+resources: {}
+# resources:
+#   requests:
+#     cpu: 100m
+#     memory: 128Mi
+#   limits:
+#     cpu: 500m
+#     memory: 512Mi
+
+livenessProbe: {}
+readinessProbe: {}
+startupProbe: {}
+lifecycle: {}
+
+volumes: []
+volumeMounts: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+hostAliases: []
+dnsConfig: {}
+dnsPolicy: ""
+restartPolicy: ""
+schedulerName: ""
+priorityClassName: ""
+runtimeClassName: ""
+terminationGracePeriodSeconds: null
+automountServiceAccountToken: null
+
+extraContainers: []
+extraPodSpec: {}
+
+deployment:
+  strategy: {}
+  minReadySeconds: null
+  revisionHistoryLimit: null
+  progressDeadlineSeconds: null
+
+statefulSet:
+  serviceName: ""
+  podManagementPolicy: OrderedReady
+  updateStrategy: {}
+  minReadySeconds: null
+  revisionHistoryLimit: null
+  persistentVolumeClaimRetentionPolicy: {}
+  ordinals: {}
+  volumeClaimTemplates: []
+
+persistentVolumeClaims: []
+
+hpa:
+  enabled: false
+  apiVersion: autoscaling/v2
+  minReplicas: 1
+  maxReplicas: 3
+  metrics: []
+  behavior: {}
+
+pdb:
+  enabled: false
+  minAvailable: ""
+  maxUnavailable: ""
+
+networkPolicy:
+  enabled: false
+  podSelector: {}
+  policyTypes: []
+  ingress: []
+  egress: []
+
+extraObjects: []

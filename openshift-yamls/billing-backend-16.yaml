@@ -1,0 +1,224 @@
+﻿apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: billing-backend-16
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: billing-backend-16
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: demo-platform
+    app.openshift.io/runtime: quarkus
+    owner: platform
+  annotations:
+    openshift.io/generated-by: fake-exporter
+    exportedAt: "2026-07-10T23:52:00Z"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: billing-backend-16-secret
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: billing-backend-16
+    app.kubernetes.io/component: backend
+    owner: platform
+  annotations:
+    exportedAt: "2026-07-10T23:52:00Z"
+type: Opaque
+data:
+  API_TOKEN: dG9rZW4tYmlsbGluZy1iYWNrZW5kLTE2
+  DB_PASSWORD: cGFzc3dvcmQtMTY=
+stringData:
+  CLIENT_ID: "billing-backend-16-client"
+  FEATURE_KEY: "billing-feature-16"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: billing-backend-16-config
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: billing-backend-16
+    owner: platform
+  annotations:
+    exportedAt: "2026-07-10T23:52:00Z"
+data:
+  LOG_LEVEL: info
+  REGION: eu-west-1
+  CLIENT_TIER: gold
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: billing-backend-16
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: billing-backend-16
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/instance: billing-backend-16
+    owner: platform
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    exportedAt: "2026-07-10T23:52:00Z"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: billing-backend-16
+    app.kubernetes.io/instance: billing-backend-16
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-backend-16
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: billing-backend-16
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/instance: billing-backend-16
+    app.kubernetes.io/version: "1.16.0"
+    app.openshift.io/runtime: quarkus
+    owner: platform
+  annotations:
+    app.openshift.io/connects-to: billing-backend-16-db
+    deployment.kubernetes.io/revision: "16"
+    exportedAt: "2026-07-10T23:52:00Z"
+spec:
+  replicas: 4
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: billing-backend-16
+      app.kubernetes.io/instance: billing-backend-16
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: billing-backend-16
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/instance: billing-backend-16
+        sidecar.istio.io/inject: "true"
+        owner: platform
+      annotations:
+        checksum/config: "16-billing-config"
+        exportedAt: "2026-07-10T23:52:00Z"
+    spec:
+      serviceAccountName: billing-backend-16
+      imagePullSecrets:
+        - name: registry-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: billing-backend-16
+          image: image-registry.openshift-image-registry.svc:5000/client-04/billing-backend-16:1.16.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: APP_NAME
+              value: "billing-backend-16"
+            - name: APP_NAMESPACE
+              value: "client-04"
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: billing-backend-16-config
+                  key: LOG_LEVEL
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: billing-backend-16-secret
+                  key: API_TOKEN
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: billing-backend-16-secret
+                  key: DB_PASSWORD
+          envFrom:
+            - configMapRef:
+                name: billing-backend-16-config
+            - secretRef:
+                name: billing-backend-16-secret
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 1536Mi
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: app-config
+              mountPath: /etc/app
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: app-config
+          configMap:
+            name: billing-backend-16-config
+      nodeSelector:
+        kubernetes.io/os: linux
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: billing-backend-16
+  namespace: client-04
+  labels:
+    app.kubernetes.io/name: billing-backend-16
+    app.kubernetes.io/component: backend
+    owner: platform
+  annotations:
+    haproxy.router.openshift.io/timeout: 60s
+    exportedAt: "2026-07-10T23:52:00Z"
+spec:
+  host: billing-backend-16.apps.demo-openshift.example.com
+  path: /
+  to:
+    kind: Service
+    name: billing-backend-16
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

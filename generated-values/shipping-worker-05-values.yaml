@@ -1,0 +1,121 @@
+﻿nameOverride: shipping-worker-05
+
+replicaCount: 1
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-05/shipping-worker-05
+  tag: 1.5.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: shipping-worker-05
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8084
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "shipping-worker-05.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8084
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "shipping-worker-05"
+  - name: APP_NAMESPACE
+    value: "client-05"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: shipping-worker-05-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: shipping-worker-05-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: shipping-worker-05-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: shipping-worker-05-config
+  - secretRef:
+      name: shipping-worker-05-secret
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 250m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: shipping-worker-05-config
+
+secret:
+  enabled: true
+  name: shipping-worker-05-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "shipping-worker-05-client"
+    FEATURE_KEY: "shipping-feature-05"
+  data:
+    API_TOKEN: dG9rZW4tc2hpcHBpbmctd29ya2VyLTA1
+    DB_PASSWORD: cGFzc3dvcmQtMDU=

@@ -1,0 +1,224 @@
+﻿apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: shipping-worker-05
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: shipping-worker-05
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: demo-platform
+    app.openshift.io/runtime: quarkus
+    owner: data
+  annotations:
+    openshift.io/generated-by: fake-exporter
+    exportedAt: "2026-07-10T12:35:00Z"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: shipping-worker-05-secret
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: shipping-worker-05
+    app.kubernetes.io/component: worker
+    owner: data
+  annotations:
+    exportedAt: "2026-07-10T12:35:00Z"
+type: Opaque
+data:
+  API_TOKEN: dG9rZW4tc2hpcHBpbmctd29ya2VyLTA1
+  DB_PASSWORD: cGFzc3dvcmQtMDU=
+stringData:
+  CLIENT_ID: "shipping-worker-05-client"
+  FEATURE_KEY: "shipping-feature-05"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shipping-worker-05-config
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: shipping-worker-05
+    owner: data
+  annotations:
+    exportedAt: "2026-07-10T12:35:00Z"
+data:
+  LOG_LEVEL: info
+  REGION: eu-west-1
+  CLIENT_TIER: gold
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shipping-worker-05
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: shipping-worker-05
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/instance: shipping-worker-05
+    owner: data
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8084"
+    exportedAt: "2026-07-10T12:35:00Z"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: shipping-worker-05
+    app.kubernetes.io/instance: shipping-worker-05
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8084
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipping-worker-05
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: shipping-worker-05
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/instance: shipping-worker-05
+    app.kubernetes.io/version: "1.5.0"
+    app.openshift.io/runtime: quarkus
+    owner: data
+  annotations:
+    app.openshift.io/connects-to: shipping-worker-05-db
+    deployment.kubernetes.io/revision: "5"
+    exportedAt: "2026-07-10T12:35:00Z"
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shipping-worker-05
+      app.kubernetes.io/instance: shipping-worker-05
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: shipping-worker-05
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/instance: shipping-worker-05
+        sidecar.istio.io/inject: "true"
+        owner: data
+      annotations:
+        checksum/config: "05-shipping-config"
+        exportedAt: "2026-07-10T12:35:00Z"
+    spec:
+      serviceAccountName: shipping-worker-05
+      imagePullSecrets:
+        - name: registry-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: shipping-worker-05
+          image: image-registry.openshift-image-registry.svc:5000/client-05/shipping-worker-05:1.5.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8084
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: APP_NAME
+              value: "shipping-worker-05"
+            - name: APP_NAMESPACE
+              value: "client-05"
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: shipping-worker-05-config
+                  key: LOG_LEVEL
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: shipping-worker-05-secret
+                  key: API_TOKEN
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shipping-worker-05-secret
+                  key: DB_PASSWORD
+          envFrom:
+            - configMapRef:
+                name: shipping-worker-05-config
+            - secretRef:
+                name: shipping-worker-05-secret
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: app-config
+              mountPath: /etc/app
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: app-config
+          configMap:
+            name: shipping-worker-05-config
+      nodeSelector:
+        kubernetes.io/os: linux
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: shipping-worker-05
+  namespace: client-05
+  labels:
+    app.kubernetes.io/name: shipping-worker-05
+    app.kubernetes.io/component: worker
+    owner: data
+  annotations:
+    haproxy.router.openshift.io/timeout: 60s
+    exportedAt: "2026-07-10T12:35:00Z"
+spec:
+  host: shipping-worker-05.apps.demo-openshift.example.com
+  path: /
+  to:
+    kind: Service
+    name: shipping-worker-05
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

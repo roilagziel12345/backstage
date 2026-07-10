@@ -1,0 +1,121 @@
+﻿nameOverride: search-api-09
+
+replicaCount: 1
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-03/search-api-09
+  tag: 1.9.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: search-api-09
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8083
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "search-api-09.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8083
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "search-api-09"
+  - name: APP_NAMESPACE
+    value: "client-03"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: search-api-09-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: search-api-09-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: search-api-09-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: search-api-09-config
+  - secretRef:
+      name: search-api-09-secret
+
+resources:
+  requests:
+    cpu: 150m
+    memory: 384Mi
+  limits:
+    cpu: 250m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: search-api-09-config
+
+secret:
+  enabled: true
+  name: search-api-09-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "search-api-09-client"
+    FEATURE_KEY: "search-feature-09"
+  data:
+    API_TOKEN: dG9rZW4tc2VhcmNoLWFwaS0wOQ==
+    DB_PASSWORD: cGFzc3dvcmQtMDk=

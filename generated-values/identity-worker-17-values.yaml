@@ -1,0 +1,121 @@
+﻿nameOverride: identity-worker-17
+
+replicaCount: 1
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-05/identity-worker-17
+  tag: 1.17.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: identity-worker-17
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8081
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "identity-worker-17.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8081
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "identity-worker-17"
+  - name: APP_NAMESPACE
+    value: "client-05"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: identity-worker-17-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: identity-worker-17-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: identity-worker-17-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: identity-worker-17-config
+  - secretRef:
+      name: identity-worker-17-secret
+
+resources:
+  requests:
+    cpu: 75m
+    memory: 192Mi
+  limits:
+    cpu: 250m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: identity-worker-17-config
+
+secret:
+  enabled: true
+  name: identity-worker-17-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "identity-worker-17-client"
+    FEATURE_KEY: "identity-feature-17"
+  data:
+    API_TOKEN: dG9rZW4taWRlbnRpdHktd29ya2VyLTE3
+    DB_PASSWORD: cGFzc3dvcmQtMTc=

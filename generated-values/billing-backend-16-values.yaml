@@ -1,0 +1,121 @@
+﻿nameOverride: billing-backend-16
+
+replicaCount: 4
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-04/billing-backend-16
+  tag: 1.16.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: billing-backend-16
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "billing-backend-16.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8080
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "billing-backend-16"
+  - name: APP_NAMESPACE
+    value: "client-04"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: billing-backend-16-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: billing-backend-16-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: billing-backend-16-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: billing-backend-16-config
+  - secretRef:
+      name: billing-backend-16-secret
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 1000m
+    memory: 1536Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: billing-backend-16-config
+
+secret:
+  enabled: true
+  name: billing-backend-16-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "billing-backend-16-client"
+    FEATURE_KEY: "billing-feature-16"
+  data:
+    API_TOKEN: dG9rZW4tYmlsbGluZy1iYWNrZW5kLTE2
+    DB_PASSWORD: cGFzc3dvcmQtMTY=

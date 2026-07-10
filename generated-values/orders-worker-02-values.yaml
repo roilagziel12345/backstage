@@ -1,0 +1,121 @@
+﻿nameOverride: orders-worker-02
+
+replicaCount: 2
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-02/orders-worker-02
+  tag: 1.2.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: orders-worker-02
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8081
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "orders-worker-02.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8081
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "orders-worker-02"
+  - name: APP_NAMESPACE
+    value: "client-02"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: orders-worker-02-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: orders-worker-02-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: orders-worker-02-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: orders-worker-02-config
+  - secretRef:
+      name: orders-worker-02-secret
+
+resources:
+  requests:
+    cpu: 75m
+    memory: 192Mi
+  limits:
+    cpu: 500m
+    memory: 768Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: orders-worker-02-config
+
+secret:
+  enabled: true
+  name: orders-worker-02-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "orders-worker-02-client"
+    FEATURE_KEY: "orders-feature-02"
+  data:
+    API_TOKEN: dG9rZW4tb3JkZXJzLXdvcmtlci0wMg==
+    DB_PASSWORD: cGFzc3dvcmQtMDI=

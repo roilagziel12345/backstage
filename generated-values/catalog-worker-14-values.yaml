@@ -1,0 +1,121 @@
+﻿nameOverride: catalog-worker-14
+
+replicaCount: 2
+
+workload:
+  type: Deployment
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/client-02/catalog-worker-14
+  tag: 1.14.0
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: catalog-worker-14
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8083
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+
+route:
+  enabled: true
+  host: "catalog-worker-14.apps.demo-openshift.example.com"
+  path: "/"
+  wildcardPolicy: None
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+containerPorts:
+  - name: http
+    containerPort: 8083
+    protocol: TCP
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+env:
+  - name: APP_NAME
+    value: "catalog-worker-14"
+  - name: APP_NAMESPACE
+    value: "client-02"
+  - name: LOG_LEVEL
+    valueFrom:
+      configMapKeyRef:
+        name: catalog-worker-14-config
+        key: LOG_LEVEL
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: catalog-worker-14-secret
+        key: API_TOKEN
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: catalog-worker-14-secret
+        key: DB_PASSWORD
+
+envFrom:
+  - configMapRef:
+      name: catalog-worker-14-config
+  - secretRef:
+      name: catalog-worker-14-secret
+
+resources:
+  requests:
+    cpu: 150m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 768Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: app-config
+    mountPath: /etc/app
+    readOnly: true
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-config
+    configMap:
+      name: catalog-worker-14-config
+
+secret:
+  enabled: true
+  name: catalog-worker-14-secret
+  type: Opaque
+  stringData:
+    CLIENT_ID: "catalog-worker-14-client"
+    FEATURE_KEY: "catalog-feature-14"
+  data:
+    API_TOKEN: dG9rZW4tY2F0YWxvZy13b3JrZXItMTQ=
+    DB_PASSWORD: cGFzc3dvcmQtMTQ=
