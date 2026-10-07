@@ -1,6 +1,6 @@
 # Backstage Developer Portal PoC
 
-A local Backstage proof of concept running on KIND with example integrations for Argo CD, Jenkins, SonarQube, and Kubernetes.
+A local Backstage proof of concept running on KIND with the packages, backend modules, configuration, mock APIs, and patch sources for Argo CD, Jenkins, SonarQube, and Kubernetes integrations.
 
 ## Contents
 
@@ -44,6 +44,19 @@ The project demonstrates how Backstage can aggregate common developer-platform s
 - Raw Kubernetes manifests and a separate Helm chart.
 - PowerShell and Bash setup workflows.
 - Local images loaded directly into KIND with no runtime image pull.
+
+### Integration implementation status
+
+| Layer | Current state |
+| --- | --- |
+| Catalog | Enabled by the committed frontend and backed by three entity files |
+| Jenkins backend | Imported by the committed backend |
+| SonarQube backend | Imported by the committed backend |
+| Kubernetes backend | Imported by the committed backend |
+| Frontend packages | Jenkins, SonarQube, Kubernetes, and Argo CD dependencies are declared |
+| Integration entity pages | Present in `backstage-patches/EntityPage.tsx`, but absent from the committed application source tree |
+
+The committed `packages/app/src/App.tsx` registers only `catalogPlugin` and `navModule`. Normal setup skips scaffolding because `my-developer-portal/` already exists, so it does not apply the integration entity-page patch. Plugin panels should be treated as intended but unverified until the frontend wiring is completed.
 
 ## Architecture
 
@@ -137,7 +150,7 @@ After setup succeeds:
 2. Use the configured guest sign-in.
 3. Open the catalog.
 4. Select payment, order, or inventory.
-5. Inspect the available CI, quality, delivery, and Kubernetes information.
+5. Inspect the catalog. After the integration page patch is wired and verified, inspect the CI, quality, delivery, and Kubernetes panels.
 
 ### Catalog model
 
