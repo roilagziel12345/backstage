@@ -1,6 +1,6 @@
 # See Your Delivery Platform in One Place
 
-This proof of concept turns a local KIND cluster into a working Backstage developer portal. Three catalog services bring together Kubernetes state, Argo CD delivery, Jenkins build history, and SonarQube quality signals without requiring four real external systems.
+This proof of concept is designed to turn a local KIND cluster into a Backstage developer portal. Three catalog services define a shared identity for Kubernetes state, Argo CD delivery, Jenkins build history, and SonarQube quality signals without requiring real Jenkins or SonarQube servers.
 
 ```text
                               DEVELOPER PORTAL
@@ -27,6 +27,8 @@ Start one local environment, sign in as a guest, and browse three production-sty
 
 The build histories and quality measures are fixtures served by the included mock server. They are for UI demonstration, not measurements of code in this repository.
 
+Current wiring note: the committed frontend registers the catalog and navigation features. The integration dependencies are installed and a richer `EntityPage.tsx` is provided under `backstage-patches/`, but that patch is not present in the committed app source tree. The integration cards remain an intended experience until that frontend wiring is applied and verified.
+
 ## How it fits together
 
 ```text
@@ -41,8 +43,8 @@ Your browser
 |  | Backstage             |------>| Mock integration server     |  |
 |  |                       |       |                             |  |
 |  | Software Catalog      |       | Jenkins-compatible routes   |  |
-|  | Kubernetes plugin     |       | SonarQube-compatible routes |  |
-|  | Argo CD plugin        |       | Health endpoint             |  |
+|  | Catalog + navigation  |       | SonarQube-compatible routes |  |
+|  | Integration backends  |       | Health endpoint             |  |
 |  +-----------+-----------+       +-----------------------------+  |
 |              |                                                    |
 |       +------+----------------------+                             |
@@ -118,7 +120,7 @@ Each component carries annotations for the same service name across Jenkins, Son
 
 ### Real plugins, controlled demo data
 
-The Backstage backend loads Jenkins, SonarQube, and Kubernetes integrations; the app package also declares the Argo CD frontend plugin. The Express mock server supplies deterministic Jenkins and SonarQube responses on port 4010, making the portal useful for demonstrations without those servers.
+The Backstage backend loads Jenkins, SonarQube, and Kubernetes integrations; the app package declares frontend dependencies for those integrations and Argo CD. The committed `App.tsx` currently enables only the catalog and navigation features. The Express mock server supplies deterministic Jenkins and SonarQube responses on port 4010 for completing and testing the intended UI wiring.
 
 ### Two deployment paths
 
