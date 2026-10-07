@@ -1,8 +1,8 @@
-# Backstage KIND Platform Architecture
+# Backstage KIND Developer Platform
 
 This repository is a local developer-portal proof of concept. It combines a Backstage application, a KIND cluster, Argo CD application definitions, Kubernetes visibility, and a mock server that emulates selected Jenkins and SonarQube APIs.
 
-This document describes the architecture evidenced by the committed repository. It separates the current implementation from the intended integration experience and does not claim that the deployment was executed or verified.
+This document combines an operator-friendly README with an evidence-backed architecture map. It separates the current implementation from the intended integration experience and does not claim that the deployment was executed or verified.
 
 ## At a glance
 
@@ -15,6 +15,46 @@ Delivery       Three Argo CD Application resources
 CI/quality     Static Jenkins and SonarQube-compatible mock responses
 Packaging      Raw Kubernetes manifests plus a Backstage Helm chart
 ```
+
+## Quick start
+
+The committed Backstage workspace requires Node.js 22 or 24 and Yarn 4.4.1. The complete local environment also requires Docker, KIND, kubectl, and PowerShell 7 or Bash. Helm is required only for the separate Helm deployment helper.
+
+PowerShell:
+
+```powershell
+cd backstage-kind-poc
+kubectl config current-context
+./setup-local-backstage.ps1
+```
+
+Bash:
+
+```bash
+cd backstage-kind-poc
+kubectl config current-context
+bash setup-local-backstage.sh
+```
+
+Expected addresses after a successful setup:
+
+| Interface | Address |
+| --- | --- |
+| Backstage | `http://localhost:3000` |
+| Argo CD | `http://localhost:8080` |
+
+The repository review performed for this document did not execute setup, builds, or tests. These addresses come from committed port mappings and scripts, not from an observed deployment.
+
+## Choose a reading path
+
+| If you need to... | Start with... |
+| --- | --- |
+| Understand what is actually wired | [Current state versus intended state](#current-state-versus-intended-state) |
+| Explain the platform to a new engineer | [System context](#system-context) and [Runtime containers and interfaces](#runtime-containers-and-interfaces) |
+| Trace an integration | [Integration data flow](#integration-data-flow) |
+| Operate or troubleshoot it | [Deployment paths](#deployment-paths), [Failure behavior](#failure-behavior), and [Verify without changing the cluster](#verify-without-changing-the-cluster) |
+| Extend the PoC | [Change guide](#change-guide) |
+| Prepare for production or OpenShift | [Known contradictions and open questions](#known-contradictions-and-open-questions) and [Adapt the platform to OpenShift](#adapt-the-platform-to-openshift) |
 
 ## Current state versus intended state
 
@@ -364,25 +404,19 @@ This repository contains no OpenShift manifests. A proposed adaptation should ad
 
 Do not present those changes as implemented until corresponding repository files exist.
 
-## Local setup
-
-The committed Backstage package requires Node.js 22 or 24 and Yarn 4.4.1. The complete environment also requires Docker, KIND, kubectl, and PowerShell 7 or Bash. Helm is required for the separate Helm path.
-
-PowerShell:
-
-```powershell
-cd backstage-kind-poc
-./setup-local-backstage.ps1
-```
-
-Bash:
-
-```bash
-cd backstage-kind-poc
-bash setup-local-backstage.sh
-```
+## Closed-network preparation
 
 The setup is not closed-network safe as committed. It retrieves an Argo CD installation manifest, application sources, package dependencies, and container base images from public services.
+
+| External dependency | On-prem replacement |
+| --- | --- |
+| Argo CD stable install URL | Reviewed, pinned manifest in an internal source repository |
+| `argoproj/argocd-example-apps` at `HEAD` | Pinned internal repository and revision |
+| JavaScript package registries | Approved internal Yarn/npm mirror |
+| Node and other container base images | Approved internal container registry |
+| Placeholder service source URLs | Actual Bitbucket Server project URLs |
+
+For repeatable operation, mirror artifacts before the run and fail setup if an external hostname remains. Do not silently fall back to the public network.
 
 ## Verify without changing the cluster
 
@@ -435,3 +469,27 @@ backstage-kind-poc/
 - Diagrams use portable ASCII rather than Mermaid, HTML, remote images, or CDN assets.
 - Unknown runtime state remains unknown because repository inspection cannot prove a successful deployment.
 - Examples show change locations and dependencies without pretending those changes already exist.
+
+## Evidence and verification ledger
+
+| Claim area | Primary evidence | Verification performed for this document |
+| --- | --- | --- |
+| Node and Yarn versions | `my-developer-portal/package.json`, Dockerfile | Values compared; stale Node 20 script comments recorded |
+| Frontend wiring | `packages/app/src/App.tsx`, app package manifest, patch source | Registered features compared with declared dependencies and patch files |
+| Backend wiring | `packages/backend/src/index.ts` | Imported backend modules enumerated |
+| Catalog model | `catalog/*/catalog-info.yaml` | Names, owners, lifecycle, system and annotations compared |
+| Mock integration behavior | `mock-server/server.js`, route files | Mounted paths and fixture keys inspected |
+| Kubernetes topology | KIND config and `k8s/` manifests | Ports, namespaces, probes, image policy and RBAC compared |
+| Helm topology | chart values and templates | Generated configuration path compared with raw manifests |
+| Argo CD behavior | `argocd-apps/*.yaml`, setup scripts | Sources, destinations and sync policy compared |
+| Setup behavior | PowerShell and Bash scripts | Flags, cluster names, remote fetches and apply order compared |
+
+Not verified:
+
+- successful dependency installation or image build;
+- successful cluster creation or deployment;
+- plugin rendering in a browser;
+- compatibility of the current Backstage package versions;
+- access to any public or on-prem external service.
+
+The correct next validation step is to run the build and deployment workflow in an isolated test environment with approved internal mirrors, then update this ledger with observed results.
