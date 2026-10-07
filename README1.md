@@ -1,6 +1,6 @@
 # Backstage KIND Developer Portal
 
-A local proof of concept for exploring a Backstage developer portal with Kubernetes visibility, Argo CD delivery status, Jenkins build history, and SonarQube quality data. It runs Backstage and a small mock integration server inside a local KIND cluster.
+A local proof of concept intended to bring Kubernetes visibility, Argo CD delivery status, Jenkins build history, and SonarQube quality data into a Backstage developer portal. It runs Backstage and a small mock integration server inside a local KIND cluster.
 
 This repository is a demonstration environment, not a production deployment.
 
@@ -30,7 +30,7 @@ KIND cluster: backstage
   |     +-- Software catalog: payment, order, inventory
   |     +-- Kubernetes API through a read-only ServiceAccount
   |     +-- Argo CD API through ARGOCD_AUTH_TOKEN
-  |     +-- Jenkins and SonarQube plugins
+  |     +-- Jenkins, SonarQube and Kubernetes backend modules
   |              |
   |              v
   |        mock-server service :4010
@@ -43,6 +43,10 @@ KIND cluster: backstage
 ```
 
 The three Argo CD applications all use `argoproj/argocd-example-apps`; they do not deploy source code from the catalog's example service URLs.
+
+### Integration wiring status
+
+The committed backend loads Jenkins, SonarQube, and Kubernetes modules, and the frontend package declares the corresponding dependencies plus an Argo CD dependency. However, the committed `packages/app/src/App.tsx` registers only `catalogPlugin` and `navModule`. The richer integration UI exists in `backstage-patches/EntityPage.tsx`, but normal setup skips scaffolding when `my-developer-portal/` already exists and therefore does not copy that patch. Treat the integration cards as intended but unverified until the frontend wiring is completed and tested.
 
 ## Prerequisites
 
@@ -128,7 +132,7 @@ The catalog contains three production-lifecycle components in the `ecommerce` sy
 | `order-service` | `backend-team` | `order-service` | `order-service` | `order-service` |
 | `inventory-service` | `inventory-team` | `inventory-service` | `inventory-service` | `inventory-service` |
 
-The Jenkins histories and SonarQube measures displayed by the portal are static demonstration data returned by `mock-server/routes/jenkins.js` and `mock-server/routes/sonarqube.js`. They are not results from real CI or code analysis systems.
+The Jenkins histories and SonarQube measures available from the mock server are static demonstration data returned by `mock-server/routes/jenkins.js` and `mock-server/routes/sonarqube.js`. They are intended for portal integration testing, not results from real CI or code analysis systems.
 
 ## Configuration
 
