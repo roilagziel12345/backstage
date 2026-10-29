@@ -1,7 +1,7 @@
 # ============================================================================
 # Stage 1: Build the backend
 # ============================================================================
-FROM node:22-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 
 RUN apt-get update && apt-get install -y \
     python3 g++ make git curl \
@@ -27,7 +27,7 @@ RUN yarn --cwd packages/app build
 # ============================================================================
 # Stage 2: Minimal production runtime
 # ============================================================================
-FROM node:22-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 
 RUN apt-get update && apt-get install -y \
     libsqlite3-dev python3 g++ make curl \
